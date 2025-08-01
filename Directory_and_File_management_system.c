@@ -1,335 +1,222 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+class File:
+    def __init__(self, name, content):
+        self.name = name
+        self.content = content
+        self.left = None
+        self.right = None
 
-// File ADT
-typedef struct File {
-    char name[50];
-    char content[1000];
-    struct File* left;  // For Binary Search Tree
-    struct File* right;
-} File;
+class Directory:
+    def __init__(self, name):
+        self.name = name
+        self.prev = None
+        self.next = None
+        self.files = None
 
-// Function to create a new file
-File* createFile(const char* name, const char* content) {
-    File* newFile = malloc(sizeof(File));
-    if (newFile == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
-    strcpy(newFile->name, name);
-    strcpy(newFile->content, content);
-    newFile->left = NULL;
-    newFile->right = NULL;
-    return newFile;
-}
+def create_file(name, content):
+    return File(name, content)
 
-// Function to display files in a directory (BST)
-void displayFiles(File* file) {
-    if (file != NULL) {
-        displayFiles(file->left);
-        printf("File: %s\n", file->name);
-        displayFiles(file->right);
-    }
-}
+def add_file_to_directory(directory, new_file):
+    def insert_file(root, file):
+        if root is None:
+            return file
+        if file.name == root.name:
+            print("File with the same name already exists in the current directory. Choose a different name.")
+            return root
+        elif file.name < root.name:
+            root.left = insert_file(root.left, file)
+        else:
+            root.right = insert_file(root.right, file)
+        return root
 
-// Directory ADT with Linked List
-typedef struct Directory {
-    char name[50];
-    struct Directory* prev;  // Pointer to the previous directory
-    struct Directory* next;  // Pointer to the next directory
-    File* files;             // Binary Search Tree of Files
-} Directory;
+    directory.files = insert_file(directory.files, new_file)
 
-// Function to create a new directory
-Directory* createDirectory(const char* name) {
-    Directory* newDirectory = malloc(sizeof(Directory));
-    if (newDirectory == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(EXIT_FAILURE);
-    }
-    strcpy(newDirectory->name, name);
-    newDirectory->prev = NULL;
-    newDirectory->next = NULL;
-    newDirectory->files = NULL;
-    return newDirectory;
-}
+def display_files(file):
+    if file:
+        display_files(file.left)
+        print("File:", file.name)
+        display_files(file.right)
 
-// Function to add a file to a directory
-void addFileToDirectory(Directory* currentDir, File* newFile) {
-    if (currentDir->files == NULL) {
-        currentDir->files = newFile;
-    } else {
-        File* currentFile = currentDir->files;
-        File* parent = NULL;
+def display_directory_contents(current_dir):
+    temp = current_dir
+    while temp:
+        print("Directory:", temp.name)
+        display_files(temp.files)
+        temp = temp.next
+    temp = current_dir.prev
+    while temp:
+        print("Directory:", temp.name)
+        display_files(temp.files)
+        temp = temp.prev
 
-        while (1) {
-            int cmp = strcmp(newFile->name, currentFile->name);
+def delete_file_from_directory(directory, filename):
+    def delete_node(root, name):
+        if root is None:
+            print("File not found.")
+            return None
 
-            if (cmp == 0) {
-                printf("File with the same name already exists in the current directory. Choose a different name.\n");
-                free(newFile);
-                return;
-            } else if (cmp < 0) {
-                if (currentFile->left == NULL) {
-                    currentFile->left = newFile;
-                    break;
-                }
-                parent = currentFile;
-                currentFile = currentFile->left;
-            } else {
-                if (currentFile->right == NULL) {
-                    currentFile->right = newFile;
-                    break;
-                }
-                parent = currentFile;
-                currentFile = currentFile->right;
-            }
-        }
-    }
-}
+        if name < root.name:
+            root.left = delete_node(root.left, name)
+        elif name > root.name:
+            root.right = delete_node(root.right, name)
+        else:
+            if root.left is None:
+                return root.right
+            elif root.right is None:
+                return root.left
 
-// Function to display the contents of a directory and its files
-void displayDirectoryContents(Directory* currentDir) {
-    if (currentDir == NULL) return;
-    Directory* tempDir = currentDir;
+            min_larger_node = root.right
+            while min_larger_node.left:
+                min_larger_node = min_larger_node.left
+            root.name, root.content = min_larger_node.name, min_larger_node.content
+            root.right = delete_node(root.right, min_larger_node.name)
+        return root
 
-    // Display directories in forward direction
-    while (tempDir != NULL) {
-        printf("Directory: %s\n", tempDir->name);
-        displayFiles(tempDir->files);
-        tempDir = tempDir->next;
-    }
+    directory.files = delete_node(directory.files, filename)
 
-    // Display directories in backward direction
-    tempDir = currentDir->prev;
-    while (tempDir != NULL) {
-        printf("Directory: %s\n", tempDir->name);
-        displayFiles(tempDir->files);
-        tempDir = tempDir->prev;
-    }
-}
+def delete_directory(directory):
+    def free_files(file):
+        if file:
+            free_files(file.left)
+            free_files(file.right)
 
-// Function to delete a file from a directory
-void deleteFileFromDirectory(Directory* currentDir, const char* fileName) {
-    File* currentFile = currentDir->files;
-    File* parent = NULL;
+    free_files(directory.files)
+    if directory.next:
+        delete_directory(directory.next)
+    if directory.prev:
+        directory.prev.next = directory.next
+    if directory.next:
+        directory.next.prev = directory.prev
 
-    while (currentFile != NULL) {
-        int cmp = strcmp(fileName, currentFile->name);
+def search_file(directory, filename):
+    def search(file):
+        if file is None:
+            return None
+        if filename == file.name:
+            return file
+        elif filename < file.name:
+            return search(file.left)
+        else:
+            return search(file.right)
 
-        if (cmp < 0) {
-            parent = currentFile;
-            currentFile = currentFile->left;
-        } else if (cmp > 0) {
-            parent = currentFile;
-            currentFile = currentFile->right;
-        } else {
-            // File found, perform deletion
-            if (currentFile->left == NULL && currentFile->right == NULL) {
-                // Case 1: No child
-                if (parent != NULL) {
-                    if (parent->left == currentFile) {
-                        parent->left = NULL;
-                    } else {
-                        parent->right = NULL;
-                    }
-                } else {
-                    currentDir->files = NULL;
-                }
-                free(currentFile);
-            } else if (currentFile->left == NULL) {
-                // Case 2: One child (right)
-                if (parent != NULL) {
-                    if (parent->left == currentFile) {
-                        parent->left = currentFile->right;
-                    } else {
-                        parent->right = currentFile->right;
-                    }
-                } else {
-                    currentDir->files = currentFile->right;
-                }
-                free(currentFile);
-            } else if (currentFile->right == NULL) {
-                // Case 2: One child (left)
-                if (parent != NULL) {
-                    if (parent->left == currentFile) {
-                        parent->left = currentFile->left;
-                    } else {
-                        parent->right = currentFile->left;
-                    }
-                } else {
-                    currentDir->files = currentFile->left;
-                }
-                free(currentFile);
-            } else {
-                // Case 3: Two children
-                File* minRight = currentFile->right;
-                parent = currentFile;
+    temp = directory
+    while temp:
+        found = search(temp.files)
+        if found:
+            print(f"File found in directory '{temp.name}':")
+            print("Name:", found.name)
+            print("Content:", found.content.strip())
+            return
+        temp = temp.next
+    print("File not found.")
 
-                // Find the leftmost node in the right subtree
-                while (minRight->left != NULL) {
-                    parent = minRight;
-                    minRight = minRight->left;
-                }
+def edit_file(file, content):
+    if file:
+        file.content = content
 
-                // Copy the values of the leftmost node to the current node
-                strcpy(currentFile->name, minRight->name);
-                strcpy(currentFile->content, minRight->content);
+def show_file(directory, filename):
+    file = directory.files
+    stack = []
+    found = None
+    # Iterative in-order search
+    while stack or file:
+        while file:
+            stack.append(file)
+            file = file.left
+        file = stack.pop()
+        if file.name == filename:
+            found = file
+            break
+        file = file.right
+    if found:
+        print(f"\n--- Contents of {found.name} ---")
+        print(found.content.strip())
+        print("--- End of file ---")
+    else:
+        print("File not found.")
 
-                // Remove the leftmost node
-                if (parent->left == minRight) {
-                    parent->left = minRight->right;
-                } else {
-                    parent->right = minRight->right;
-                }
-                free(minRight);
-            }
-            return;
-        }
-    }
-    printf("File not found.\n");
-}
+def main():
+    root = Directory("root")
+    current_dir = root
 
-// Function to delete a directory and its contents
-void deleteDirectory(Directory* currentDir) {
-    if (currentDir == NULL) return;
-    File* currentFile = currentDir->files;
+    while True:
+        print(f"\nCurrent Directory: {current_dir.name}")
+        command = input("Enter command (createDir, createFile, listDir, changeDir, deleteFile, deleteDir, searchFile, editFile, showFile, quit): ")
 
-    // Free files in the current directory
-    while (currentFile != NULL) {
-        File* temp = currentFile;
-        currentFile = currentFile->right;
-        free(temp);
-    }
+        if command == "createDir":
+            name = input("Enter directory name: ")
+            new_dir = Directory(name)
+            current_dir.next = new_dir
+            new_dir.prev = current_dir
+            current_dir = new_dir
 
-    // Recursively delete subdirectories
-    deleteDirectory(currentDir->next);
+        elif command == "createFile":
+            name = input("Enter file name: ")
+            content = input("Enter file content: ")
+            new_file = create_file(name, content)
+            add_file_to_directory(current_dir, new_file)
 
-    // Adjust pointers in the linked list
-    if (currentDir->prev != NULL) {
-        currentDir->prev->next = currentDir->next;
-    }
-    if (currentDir->next != NULL) {
-        currentDir->next->prev = currentDir->prev;
-    }
+        elif command == "listDir":
+            display_directory_contents(root)
 
-    // Free the current directory
-    free(currentDir);
-}
+        elif command == "changeDir":
+            name = input("Enter directory name: ")
+            temp = root
+            found = False
+            while temp:
+                if temp.name == name:
+                    current_dir = temp
+                    found = True
+                    break
+                temp = temp.next
+            if not found:
+                print("Directory not found.")
 
-// Function to search for a file in the directory and its subdirectories
-void searchFile(Directory* currentDir, const char* fileName) {
-    if (currentDir == NULL) return;
-    File* currentFile = currentDir->files;
+        elif command == "deleteFile":
+            name = input("Enter file name: ")
+            delete_file_from_directory(current_dir, name)
 
-    // Search for the file in the current directory
-    while (currentFile != NULL) {
-        if (strcmp(fileName, currentFile->name) == 0) {
-            printf("File found in directory '%s':\n", currentDir->name);
-            printf("Name: %s\n", currentFile->name);
-            printf("Content: %s\n", currentFile->content);
-            return;  // Exit function after finding the file
-        }
-        currentFile = currentFile->right;
-    }
+        elif command == "deleteDir":
+            prev_dir = current_dir.prev
+            delete_directory(current_dir)
+            current_dir = prev_dir if prev_dir else root
 
-    // Recursively search in subdirectories
-    searchFile(currentDir->next, fileName);
-}
+        elif command == "searchFile":
+            name = input("Enter file name: ")
+            search_file(current_dir, name)
 
-// Function to edit the content of a file
-void editFile(File* file, const char* content) {
-    if (file != NULL) {
-        strcpy(file->content, content);
-    }
-}
+        elif command == "editFile":
+            name = input("Enter file name: ")
+            file = current_dir.files
+            stack = []
+            found = None
+            # Iterative in-order search
+            while stack or file:
+                while file:
+                    stack.append(file)
+                    file = file.left
+                file = stack.pop()
+                if file.name == name:
+                    found = file
+                    break
+                file = file.right
+            if found:
+                content = input("Enter new content: ")
+                edit_file(found, content)
+                print("File content updated successfully.")
+            else:
+                print("File not found.")
 
-int main() {
-    Directory* root = createDirectory("root");
-    Directory* currentDir = root;
-    char command[50];
-    char name[50];
-    char content[1000];
+        elif command == "showFile":
+            name = input("Enter file name: ")
+            show_file(current_dir, name)
 
-    // Main loop for user commands
-    while (1) {
-        printf("\nCurrent Directory: %s\n", currentDir->name);
-        printf("Enter command (createDir, createFile, listDir, changeDir, deleteFile, deleteDir, searchFile, editFile, quit): ");
-        scanf("%s", command);
+        elif command == "quit":
+            break
 
-        // Process user command
-        if (strcmp(command, "createDir") == 0) {
-            printf("Enter directory name: ");
-            scanf("%s", name);
-            // No need for createDirCheck as it was not defined
-            // You can directly call createDirectory
-            Directory* newDir = createDirectory(name);
-            currentDir->next = newDir;
-            newDir->prev = currentDir;
-            currentDir = newDir;
-        } else if (strcmp(command, "createFile") == 0) {
-            printf("Enter file name: ");
-            scanf("%s", name);
-            printf("Enter file content: ");
-            getchar();  // Consume newline character left by previous scanf
-            fgets(content, sizeof(content), stdin);
-            File* newFile = createFile(name, content);
-            addFileToDirectory(currentDir, newFile);
-        } else if (strcmp(command, "listDir") == 0) {
-            displayDirectoryContents(root);
-        } else if (strcmp(command, "changeDir") == 0) {
-            printf("Enter directory name: ");
-            scanf("%s", name);
-            Directory* tempDir = root;
-            while (tempDir != NULL) {
-                if (strcmp(tempDir->name, name) == 0) {
-                    currentDir = tempDir;
-                    break;
-                }
-                tempDir = tempDir->next;
-            }
-            if (tempDir == NULL) {
-                printf("Directory not found.\n");
-            }
-        } else if (strcmp(command, "deleteFile") == 0) {
-            printf("Enter file name: ");
-            scanf("%s", name);
-            deleteFileFromDirectory(currentDir, name);
-        } else if (strcmp(command, "deleteDir") == 0) {
-            deleteDirectory(currentDir);
-            currentDir = currentDir->prev;
-        } else if (strcmp(command, "searchFile") == 0) {
-            printf("Enter file name: ");
-            scanf("%s", name);
-            searchFile(currentDir, name);
-        } else if (strcmp(command, "editFile") == 0) {
-            printf("Enter file name: ");
-            scanf("%s", name);
-            File* currentFile = currentDir->files;
-            while (currentFile != NULL) {
-                if (strcmp(name, currentFile->name) == 0) {
-                    printf("Enter new content: ");
-                    getchar();  // Consume newline character left by previous scanf
-                    fgets(content, sizeof(content), stdin);
-                    editFile(currentFile, content);
-                    printf("File content updated successfully.\n");
-                    break;  // Removed the 'return' statement
-                }
-                currentFile = currentFile->right;
-            }
-            if (currentFile == NULL) {
-                printf("File not found.\n");
-            }
-        } else if (strcmp(command, "quit") == 0) {
-            break;
-        } else {
-            printf("Invalid command.\n");
-        }
-    }
+        else:
+            print("Invalid command.")
 
-    // Free allocated memory before exiting
-    deleteDirectory(root);
+    delete_directory(root)
 
-    return 0;
-}
+if __name__ == "__main__":
+    main()
