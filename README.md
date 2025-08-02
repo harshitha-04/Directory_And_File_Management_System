@@ -1,4 +1,4 @@
-# Directory & File Management System (Python Version)
+# Directory & File Management System 
 
 A lightweight, terminal-based application in Python that simulates basic file system operations using Binary Search Trees for file management and a doubly linked list for directory navigation. This project is a direct port of its C-based counterpart, implemented fully in Python.
 
